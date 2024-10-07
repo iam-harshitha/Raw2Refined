@@ -11,6 +11,9 @@ st.title("Raw2Refined: Automated Data Preprocessing")
 if 'step' not in st.session_state:
     st.session_state.step = 0
 
+if 'duplicates_dropped' not in st.session_state:
+    st.session_state.duplicates_dropped = False
+
 # Upload CSV File
 uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
@@ -83,17 +86,37 @@ if uploaded_file is not None:
     for col, count in numerical_outlier_counts.items():
         st.write(f"**{col}:** {count} outliers")
 
-    # Handling the missing values
-    st.write("## Handling the Missing Values")
 
-    missing_columns = df.columns[df.isnull().any()].tolist()
-    
-    if not missing_columns:
-        st.write("#### There are no missing values in the provided dataset")
-        st.session_state.step = 3  # Skip to handling duplicates
-    else:
+    # Display the cleaned dataset
+    st.write("### Cleaned Dataset Overview")
+    st.write(df.head())
+    st.write(f"**Total rows after cleaning:** {df.shape[0]}")
+
+    # Show c data types
+    st.write("### Data Types ")
+    st.write(df.dtypes)
+
+    # Show statistical summary after cleaning
+    st.write("### Statistical Summary After Cleaning")
+    st.write(df.describe())
+
+    # Display missing values
+    st.write("###  Missing Values")
+    missing_values = df.isnull().sum()
+    st.write(missing_values[missing_values > 0])
+
+
+    # Function to handle missing values
+    def handle_missing_values(df):
+        st.write("## Handling Missing Values")
+        missing_columns = df.columns[df.isnull().any()].tolist()
+        
+        if not missing_columns:
+         st.write("#### There are no missing values in the provided dataset")
+         st.session_state.step = 4 # Skip to handling duplicates
+        elif missing_values:
         # Step 1: Drop columns with missing values
-        st.write("### Step 1: Drop Columns with Missing Values")
+          st.write("### Step 1: Drop Columns with Missing Values")
         
         drop_columns = st.multiselect(
             "Select columns to drop (Columns with missing values)", 
@@ -110,15 +133,15 @@ if uploaded_file is not None:
         if st.button("Proceed to Step 2"):
             st.session_state.step = 2  # Move to step 2
 
-    # Step 2: Handle missing values in remaining numerical columns
-    if st.session_state.step > 1:
-      if missing_columns :  # Show this only if step 1 was completed
-        st.write("### Step 2: Fill Missing Values in Numerical Columns")
+     # Step 2: Handle missing values in remaining numerical columns
+        if st.session_state.step == 2:
+          if missing_columns :  # Show this only if step 1 was completed
+           st.write("### Step 2: Fill Missing Values in Numerical Columns")
 
         # Filter out numerical columns that still have missing values
-        numerical_columns_with_missing = df.select_dtypes(include=['float64', 'int64']).columns[df.select_dtypes(include=['float64', 'int64']).isnull().any()].tolist()
+          numerical_columns_with_missing = df.select_dtypes(include=['float64', 'int64']).columns[df.select_dtypes(include=['float64', 'int64']).isnull().any()].tolist()
 
-        if numerical_columns_with_missing:
+          if numerical_columns_with_missing:
             counter = 0
 
             while numerical_columns_with_missing:
@@ -156,15 +179,15 @@ if uploaded_file is not None:
             if st.button("Proceed to Step 3"):
                 st.session_state.step = 3  # Move to step 3
 
-    # Step 3: Handle missing values in categorical columns
-    if st.session_state.step >= 3 : # Show this only if step 3 was completed
-      if missing_columns :
-        st.write("### Step 3: Fill Missing Values in Categorical Columns")
+          # Step 3: Handle missing values in categorical columns
+        if st.session_state.step == 3 : # Show this only if step 3 was completed
+         if missing_columns :
+          st.write("### Step 3: Fill Missing Values in Categorical Columns")
 
         # Filter out categorical columns that still have missing values
-        categorical_columns_with_missing = df.select_dtypes(include=['object']).columns[df.select_dtypes(include=['object']).isnull().any()].tolist()
+          categorical_columns_with_missing = df.select_dtypes(include=['object']).columns[df.select_dtypes(include=['object']).isnull().any()].tolist()
         
-        if categorical_columns_with_missing:
+          if categorical_columns_with_missing:
             processed_columns = []
 
             while categorical_columns_with_missing:
@@ -196,30 +219,39 @@ if uploaded_file is not None:
                 st.write("### ALL the Missing values handled successfully!!!")
                 st.write(df)
                
-        else:
+        elif not categorical_columns_with_missing:
             st.write("No Missing values found in Categorical Columns")
             st.write(df)
 
-    # Handling the Duplicates
-    if st.session_state.step >= 3: 
-      if st.button("Next"):
-        st.write("## Handling Duplicates")
-        duplicate_count = df.duplicated().sum()
-        st.write(f"### Number of Duplicated Rows in Dataset: {duplicate_count}")
+        if st.button("Next Step (Handle Duplicates)") :
+            st.session_state.step = 4  # Move to Step 4    
 
-        if duplicate_count > 0:
-            st.write("#### Do you want to remove the duplicates by keeping the first occurrence ??")
+        return df
+
+    
+
+    # Function to handle duplicates
+    def handle_duplicates(df):
+        st.session_state.step == 4
+        if st.button("Next Step (Handle Duplicates)") :
+        
+         st.write("## Handling Duplicates")
+         duplicate_count = df.duplicated().sum()
+         st.write(f"**Total duplicates:** {duplicate_count}")
+
+         if duplicate_count > 0:
             if st.button("Drop Duplicates"):
-                df = df.drop_duplicates()
-                st.write("Duplicates dropped successfully!")
-                st.write(f"Updated Dataset Shape: {df.shape}")
+                df.drop_duplicates(inplace=True)
+                st.session_state.duplicates_dropped = True
+                st.write("**Duplicates have been dropped.**")
+         else:
+            st.write("No duplicates to drop.")
+         return df
 
-                # Display the processed DataFrame
-                st.write("## Processed Dataset")
-                st.write(df)
+    # Handle missing values
+    df = handle_missing_values(df)
 
-            else:
-              st.write("No duplicates found in the dataset.")
+    # Handle duplicates
+    df = handle_duplicates(df)
 
-        else:
-         st.write("No duplicates to remove.")
+    
