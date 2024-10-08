@@ -205,8 +205,6 @@ if uploaded_file is not None:
                 st.write(df)
                 st.session_state.step = 4  # Increment the step to 4
 
-   
-   
     # Handling the Duplicates
     if st.session_state.step == 4: 
         st.write("## Handling Duplicates")
@@ -230,13 +228,11 @@ if uploaded_file is not None:
             st.dataframe(df)
             st.session_state.step = 5
 
-
-
     # Step 5: Handling Outliers
-    if st.session_state.step == 5 :
+    if st.session_state.step >= 5 :
         st.write("## Handling Outliers")
 
-         # Function to detect outliers using IQR method
+        # Function to detect outliers using IQR method
         def count_outliers_iqr(data):
              outlier_counts = {}
              for col in numerical_columns:
@@ -283,66 +279,73 @@ if uploaded_file is not None:
         else:
             st.write("Outliers were not removed.")
             st.session_state.step = 6  # Proceed to the next step
-    
-    
+
     ## Encoding Categorical Variables
-    if st.session_state.step == 6 :
+    if st.session_state.step >= 6 :
        st.write ("## Encoding Categorical Variables")
+       st.write("Do you want to procees??")
        # Apply one-hot encoding
-       categorical_columns = df.select_dtypes(include=['object']).columns
-       encoder = OneHotEncoder(sparse=False, drop='first')
-       encoded_df = pd.DataFrame(encoder.fit_transform(df[categorical_columns]))
+       if st.button("yes, proceed"):
+        categorical_columns = df.select_dtypes(include=['object']).columns
+        encoder = OneHotEncoder(sparse_output=False, drop='first')  # Updated line
+        encoded_array = encoder.fit_transform(df[categorical_columns])
 
-        # Concatenate with original dataset
-       final_df = pd.concat([df.drop(categorical_columns, axis=1), encoded_df], axis=1)
-       st.write("###VData after encoding:")
-       df = final_df
-       st.dataframe(df)
+       # Get the feature names for the encoded columns
+        encoded_feature_names = encoder.get_feature_names_out(categorical_columns)
 
-       st.session_state.step = 7
+       # Create a DataFrame with the encoded data
+        encoded_df = pd.DataFrame(encoded_array, columns=encoded_feature_names)
 
-
-    # Feature scaling(numerical columns)
-    if st.session_state.step == 7:
-        st.write("## Feature Scaling")
-
-        # Scale numerical columns using StandardScaler
-        scaler = StandardScaler()
-        scaled_df = df.copy()
-        scaled_df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
-
-        st.write("Data after scaling:")
-        df = scaled_df
+       # Concatenate with original dataset
+        final_df = pd.concat([df.drop(categorical_columns, axis=1).reset_index(drop=True), encoded_df.reset_index(drop=True)], axis=1)
+        st.write("### Data after encoding:")
+        df = final_df
         st.dataframe(df)
-        st.session_state.step = 8
+        st.session_state.step = 7
+       if st.button("No"):
+         st.session_state.step = 7
 
+    # Feature scaling (numerical columns)
+    if st.session_state.step >= 7:
+        st.write("## Feature Scaling")
+        st.write("### Do you want to do feature scaling??")
+        # Scale numerical columns using StandardScaler
+        if st.button("Go Ahead"):
+         scaler = StandardScaler()
+         scaled_df = df.copy()
+         scaled_df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
 
-    if st.session_state.step == 8:
+         st.write("Data after scaling:")
+         df = scaled_df
+         st.dataframe(df)
+         st.session_state.step = 8
+
+    if st.session_state.step >= 8:
         st.write("## Splitting Data into Train/Test Sets")
 
-        # Split into features and target
-        X = df.drop('LoanAmount', axis=1)  # Replace 'target_column' with your target
-        y = df['Loan_Amount_Term']
+        # Replace 'LoanAmount' and 'Loan_Amount_Term' with your actual feature and target columns
+        target_column = 'Loan_Amount_Term'  # Replace with your target column
+        if target_column not in df.columns:
+            st.error(f"Target column '{target_column}' not found in the dataset.")
+        else:
+            X = df.drop(target_column, axis=1)
+            y = df[target_column]
 
-        # Split the data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            # Split the data
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Combine X_train and y_train, X_test and y_test back into dataframes
-        train_df = pd.concat([X_train, y_train], axis=1)
-        test_df = pd.concat([X_test, y_test], axis=1)
+            # Combine X_train and y_train, X_test and y_test back into dataframes
+            train_df = pd.concat([X_train.reset_index(drop=True), y_train.reset_index(drop=True)], axis=1)
+            test_df = pd.concat([X_test.reset_index(drop=True), y_test.reset_index(drop=True)], axis=1)
 
-        # Save train and test datasets as CSV files
-        train_df.to_csv('train_data.csv', index=False)
-        test_df.to_csv('test_data.csv', index=False)
+            # Save train and test datasets as CSV files
+            train_df.to_csv('train_data.csv', index=False)
+            test_df.to_csv('test_data.csv', index=False)
 
-        st.write("### Data split successfully!")
-        st.write(f"Training data shape: {X_train.shape}")
-        st.write(f"Testing data shape: {X_test.shape}")
-        st.write(f"Training dataset: {train_df}")
-        st.write(f"Training dataset: {train_df}")
-                 
-    
-
-
-
-    
+            st.write("### Data split successfully!")
+            st.write(f"Training data shape: {X_train.shape}")
+            st.write(f"Testing data shape: {X_test.shape}")
+            st.write("### Training Dataset:")
+            st.dataframe(train_df)
+            st.write("### Testing Dataset:")
+            st.dataframe(test_df)

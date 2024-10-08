@@ -154,7 +154,10 @@ if uploaded_file is not None:
 
                 if not df.isnull().any().any():
                     st.write("All missing values in numerical columns have been handled!")
-
+                    if st.button("Proceed to Step 3"):
+                     st.session_state.step = 3  # Move to step 3
+            else: 
+                st.write("#### There are no missing Numerical values")
                 # Proceed to Step 3
                 if st.button("Proceed to Step 3"):
                     st.session_state.step = 3  # Move to step 3
@@ -194,19 +197,17 @@ if uploaded_file is not None:
                     processed_columns.append(selected_column)
                     categorical_columns_with_missing = [col for col in categorical_columns_with_missing if col not in processed_columns]
 
-                if not df.isnull().any().any():
+                if not df.isnull().any().any() or df.isnull().any().any():
                     st.write("All missing values in categorical columns have been handled!")
                     st.write("### ALL the Missing values handled successfully!!!")
                     st.write(df)
                     st.session_state.step = 4  # Increment the step to 4
-               
+
             else:
                 st.write("No Missing values found in Categorical Columns")
                 st.write(df)
                 st.session_state.step = 4  # Increment the step to 4
 
-   
-   
     # Handling the Duplicates
     if st.session_state.step == 4: 
         st.write("## Handling Duplicates")
@@ -225,18 +226,13 @@ if uploaded_file is not None:
                 st.dataframe(df)
                 st.session_state.step = 5
         else:
-            st.write("#### There are no duplicates in the dataset.")
-            st.write("## Processed DataFrame")
-            st.dataframe(df)
+            st.write("##### There are no duplicates in the dataset.")
             st.session_state.step = 5
 
-
-
-    # Step 5: Handling Outliers
-    if st.session_state.step == 5 :
+    if st.session_state.step >= 5 :
         st.write("## Handling Outliers")
 
-         # Function to detect outliers using IQR method
+        # Function to detect outliers using IQR method
         def count_outliers_iqr(data):
              outlier_counts = {}
              for col in numerical_columns:
@@ -279,70 +275,9 @@ if uploaded_file is not None:
             st.write(f"Updated Dataset Shape: {df.shape}")
             st.write("## Processed DataFrame")
             st.dataframe(df)
-            st.session_state.step = 6  # Proceed to the next step
-        else:
+            st.write("## Congrats Data Preprocessing completed successfully!!!")
+          
+        elif st.button("No"):
             st.write("Outliers were not removed.")
-            st.session_state.step = 6  # Proceed to the next step
-    
-    
-    ## Encoding Categorical Variables
-    if st.session_state.step == 6 :
-       st.write ("## Encoding Categorical Variables")
-       # Apply one-hot encoding
-       categorical_columns = df.select_dtypes(include=['object']).columns
-       encoder = OneHotEncoder(sparse=False, drop='first')
-       encoded_df = pd.DataFrame(encoder.fit_transform(df[categorical_columns]))
-
-        # Concatenate with original dataset
-       final_df = pd.concat([df.drop(categorical_columns, axis=1), encoded_df], axis=1)
-       st.write("###VData after encoding:")
-       df = final_df
-       st.dataframe(df)
-
-       st.session_state.step = 7
-
-
-    # Feature scaling(numerical columns)
-    if st.session_state.step == 7:
-        st.write("## Feature Scaling")
-
-        # Scale numerical columns using StandardScaler
-        scaler = StandardScaler()
-        scaled_df = df.copy()
-        scaled_df[numerical_columns] = scaler.fit_transform(df[numerical_columns])
-
-        st.write("Data after scaling:")
-        df = scaled_df
-        st.dataframe(df)
-        st.session_state.step = 8
-
-
-    if st.session_state.step == 8:
-        st.write("## Splitting Data into Train/Test Sets")
-
-        # Split into features and target
-        X = df.drop('LoanAmount', axis=1)  # Replace 'target_column' with your target
-        y = df['Loan_Amount_Term']
-
-        # Split the data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Combine X_train and y_train, X_test and y_test back into dataframes
-        train_df = pd.concat([X_train, y_train], axis=1)
-        test_df = pd.concat([X_test, y_test], axis=1)
-
-        # Save train and test datasets as CSV files
-        train_df.to_csv('train_data.csv', index=False)
-        test_df.to_csv('test_data.csv', index=False)
-
-        st.write("### Data split successfully!")
-        st.write(f"Training data shape: {X_train.shape}")
-        st.write(f"Testing data shape: {X_test.shape}")
-        st.write(f"Training dataset: {train_df}")
-        st.write(f"Training dataset: {train_df}")
-                 
-    
-
-
-
-    
+            st.write(df)
+            st.write("## Congrats Data Preprocessing completed successfully!!!") 
